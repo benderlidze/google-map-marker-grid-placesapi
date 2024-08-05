@@ -29,18 +29,20 @@
         }
 
         #top-menu {
-            height: 50px;
             background-color: #f1f1f1;
             display: flex;
             flex-direction: row;
             height: 100px;
             width: 100%;
+            justify-content: space-between;
+            align-items: flex-end;
         }
 
         #grid {
             display: flex;
             flex-direction: row;
             gap: 10px;
+            height: fit-content;
         }
     </style>
 </head>
@@ -49,7 +51,13 @@
 
     <div id="container">
         <div id="top-menu">
+
+            <div id="google-poi">
+                Google Business Profile
+                <input type="text" id="search">
+            </div>
             <div id="grid"></div>
+
         </div>
         <div id="map"></div>
     </div>
@@ -57,6 +65,7 @@
     <script>
 
         const gridDiv = document.getElementById('grid');
+        const googleSearch = document.getElementById('search');
 
         const appData = new Proxy({
             gridCenter: { lat: 32.0330112964211, lng: 34.82596537402672 },
@@ -85,6 +94,31 @@
                 rotateControl: false,
                 fullscreenControl: false,
             });
+
+            //google POI search 
+            // Initialize the autocomplete
+            let autocomplete;
+
+            function initAutocomplete() {
+                autocomplete = new google.maps.places.Autocomplete(googleSearch, {
+                    types: ['geocode'],
+                });
+                autocomplete.addListener('place_changed', onPlaceChanged);
+            }
+            function onPlaceChanged() {
+                var place = autocomplete.getPlace();
+                if (!place.geometry) {
+                    // User entered the name of a Place that was not suggested and
+                    // pressed the Enter key, or the Place Details request failed.
+                    googleSearch.placeholder = 'Enter a place';
+                } else {
+                    const { lat, lng } = place.geometry.location.toJSON();
+                    appData.gridCenter = { lat, lng };
+                    map.setCenter({ lat, lng });
+                }
+            }
+            google.maps.event.addDomListener(window, 'load', initAutocomplete);
+
 
             const gridDropDown = createDropDown({
                 name: 'gridDropDown',
@@ -135,12 +169,39 @@
                 gridUnits: appData.gridUnits
             }).forEach((coord) => {
                 const [lng, lat] = coord;
-                const marker = new google.maps.Marker({
-                    position: { lat, lng },
-                    map: map,
-                });
+
+                const marker = createInteractiveMarker(map, { lat, lng }, false);
                 appData.allMarkers.push(marker);
             });
+        }
+
+        function createInteractiveMarker(map, position, isActive) {
+
+            const marker = new google.maps.Marker({
+                position: position,
+                map: map,
+                icon: createCircleMarkerIcon('gray'),
+                isActive: isActive
+            });
+            marker.addListener('click', function () {
+                const currentActiveState = this.get('isActive');
+                const newActiveState = !currentActiveState;
+                // Update the isActive property
+                this.set('isActive', newActiveState);
+                // Update the icon
+                this.setIcon(createCircleMarkerIcon(newActiveState ? 'red' : 'gray'));
+            });
+            return marker;
+        }
+
+        function createCircleMarkerIcon(color) {
+            return {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: color,
+                fillOpacity: 1,
+                strokeWeight: 0,
+                scale: 10 // Adjust this value to change the size of the circle
+            };
         }
 
         function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters, gridUnits }) {
@@ -164,7 +225,6 @@
                     const markerBearing = markerOffset >= 0 ? 90 : 270;
                     const markerPoint = turf.destination(lineStart, Math.abs(markerOffset), markerBearing);
                     coordinates.push(markerPoint.geometry.coordinates);
-
                     const [lng, lat] = markerPoint.geometry.coordinates
                 }
             }
