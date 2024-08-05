@@ -169,7 +169,6 @@
                 gridUnits: appData.gridUnits
             }).forEach((coord) => {
                 const [lng, lat] = coord;
-
                 const marker = createInteractiveMarker(map, { lat, lng }, false);
                 appData.allMarkers.push(marker);
             });
@@ -195,13 +194,7 @@
         }
 
         function createCircleMarkerIcon(color) {
-            return {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: color,
-                fillOpacity: 1,
-                strokeWeight: 0,
-                scale: 10 // Adjust this value to change the size of the circle
-            };
+            return "icons/circle-plus-svgrepo-com.png";
         }
 
         function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters, gridUnits }) {
@@ -231,10 +224,6 @@
 
             return coordinates;
         }
-
-
-
-
 
         function createDropDown({ name, container, values, onChange }) {
             const select = document.createElement('select');
