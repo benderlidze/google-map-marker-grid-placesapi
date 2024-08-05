@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7"></script>
+    <style>
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #top-menu {
+            height: 50px;
+            background-color: #f1f1f1;
+            display: flex;
+            flex-direction: row;
+            height: 100px;
+            width: 100%;
+        }
+
+        #grid {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="container">
+        <div id="top-menu">
+            <div id="grid"></div>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <script>
+
+        const gridDiv = document.getElementById('grid');
+
+        const appData = new Proxy({
+            gridSize: 5,
+            gridGap: 10,
+            gridUnits: 'kilometers',
+            allMarkers: []
+        }, {
+            set(target, property, value) {
+                target[property] = value;
+                if (property !== 'allMarkers') {
+                    drawGrid(target);
+                }
+                return true;
+            }
+        });
+
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 32.0330112964211, lng: 34.82596537402672 },
+                zoom: 13,
+                streetViewControl: false,
+                zoomControl: true,
+                mapTypeControl: false,
+                rotateControl: false,
+                fullscreenControl: false,
+            });
+
+            const gridDropDown = createDropDown({
+                name: 'gridDropDown',
+                container: document.getElementById('top-menu'),
+                values: [5, 7, 9, 15, 21],
+                onChange: (e) => {
+                    appData.gridSize = parseInt(e.target.value);
+                }
+            });
+
+            const gridGapDropDown = createDropDown({
+                name: 'gridGapDropDown',
+                container: document.getElementById('top-menu'),
+                values: [0.1, 0.2, 0.3, 0.4, 0.5],
+                onChange: (e) => {
+                    appData.gridSize = parseInt(e.target.value);
+                }
+            });
+
+            const gridGapUnitDropDown = createDropDown({
+                name: 'gridSize',
+                container: document.getElementById('top-menu'),
+                values: ["meters", "kilometers"],
+                onChange: (e) => {
+                    appData.gridSize = parseInt(e.target.value);
+                }
+            });
+
+            gridDiv.appendChild(gridDropDown);
+            gridDiv.appendChild(gridGapDropDown);
+            gridDiv.appendChild(gridGapUnitDropDown);
+
+        }
+
+        function drawGrid() {
+
+            appData.allMarkers.forEach((marker) => {
+                marker.setMap(null);
+            });
+
+            const { lat, lng } = map.getCenter().toJSON();
+            const result = calculateMarkerCoordinates({
+                centerCoord: [lng, lat],
+                rows: appData.gridSize,
+                cols: appData.gridSize,
+                distanceMeters: appData.gridGap,
+            }).forEach((coord) => {
+                const [lng, lat] = coord;
+                const marker = new google.maps.Marker({
+                    position: { lat, lng },
+                    map: map,
+                });
+                appData.allMarkers.push(marker);
+            });
+        }
+
+        function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters }) {
+            const coordinates = [];
+            const sideMarkers = Math.floor(cols / 2);
+            const markerDistance = distanceMeters / (cols - 1);
+            const lineDistance = distanceMeters / (rows - 1);
+            const centerPoint = turf.point(centerCoord);
+
+            for (let line = 0; line < rows; line++) {
+
+                const lineOffset = (line - Math.floor(rows / 2)) * lineDistance;
+                const lineBearing = lineOffset >= 0 ? 0 : 180;
+                const lineStart = turf.destination(centerPoint, Math.abs(lineOffset), lineBearing);
+
+                for (let marker = 0; marker < cols; marker++) {
+                    const markerOffset = (marker - sideMarkers) * markerDistance;
+                    const markerBearing = markerOffset >= 0 ? 90 : 270;
+                    const markerPoint = turf.destination(lineStart, Math.abs(markerOffset), markerBearing);
+                    coordinates.push(markerPoint.geometry.coordinates);
+
+                    const [lng, lat] = markerPoint.geometry.coordinates
+                }
+            }
+
+            return coordinates;
+        }
+
+
+
+
+
+        function createDropDown({ name, container, values, onChange }) {
+            const select = document.createElement('select');
+            select.name = name;
+            select.id = name;
+            select.onchange = onChange;
+
+            values.forEach((value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.text = value;
+                select.appendChild(option);
+            });
+
+            return select;
+        }
+
+    </script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBeVERtl6-MScPy5xT3ysrJsM4zRkcjGaY&libraries=places&callback=initMap"
+        async defer></script>
+
+</body>
+
+</html>
