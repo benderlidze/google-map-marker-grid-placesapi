@@ -170,9 +170,9 @@
                 cols: appData.gridSize,
                 distanceMeters: appData.gridGap,
                 gridUnits: appData.gridUnits
-            }).forEach((coord) => {
-                const [lng, lat] = coord;
-                const marker = createInteractiveMarker(map, { lat, lng }, false);
+            }).forEach((item) => {
+                const [lng, lat] = item.coordinates;
+                const marker = createInteractiveMarker(map, { lat, lng }, item.active);
                 appData.allMarkers.push(marker);
             });
         }
@@ -183,15 +183,16 @@
                 position: position,
                 map: map,
                 icon: createCircleMarkerIcon(isActive),
-                isActive: isActive
+                isActive: isActive,
+                opacity: isActive ? 1 : 0.3
             });
             marker.addListener('click', function () {
                 const currentActiveState = this.get('isActive');
                 const newActiveState = !currentActiveState;
-                // Update the isActive property
+                console.log('newActiveState', newActiveState);
                 this.set('isActive', newActiveState);
-                // Update the icon
-                this.setIcon(createCircleMarkerIcon(newActiveState ? 'red' : 'gray'));
+                this.setIcon(createCircleMarkerIcon(newActiveState));
+                this.setOpacity(newActiveState ? 1 : 0.3);
             });
             return marker;
         }
@@ -204,8 +205,14 @@
         }
 
         function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters, gridUnits }) {
+
+            appData.allMarkers = [];
+
             const coordinates = [];
-            const sideMarkers = Math.floor(cols / 2);
+            const totalMarkers = 50;
+            const halfTotal = Math.floor(totalMarkers / 2);
+            const halfCols = Math.floor(cols / 2);
+            const halfRows = Math.floor(rows / 2);
 
             const unit = gridUnits === 'km' ? 1 : 1.60934;
             const markerDistance = (distanceMeters / (cols - 1)) * unit;
@@ -213,18 +220,24 @@
 
             const centerPoint = turf.point([centerCoord.lng, centerCoord.lat]);
 
-            for (let line = 0; line < rows; line++) {
-
-                const lineOffset = (line - Math.floor(rows / 2)) * lineDistance;
+            for (let line = 0; line < totalMarkers; line++) {
+                const lineOffset = (line - halfTotal) * (lineDistance / (rows - 1));
                 const lineBearing = lineOffset >= 0 ? 0 : 180;
                 const lineStart = turf.destination(centerPoint, Math.abs(lineOffset), lineBearing);
 
-                for (let marker = 0; marker < cols; marker++) {
-                    const markerOffset = (marker - sideMarkers) * markerDistance;
+                for (let marker = 0; marker < totalMarkers; marker++) {
+                    const markerOffset = (marker - halfTotal) * (markerDistance / (cols - 1));
                     const markerBearing = markerOffset >= 0 ? 90 : 270;
                     const markerPoint = turf.destination(lineStart, Math.abs(markerOffset), markerBearing);
-                    coordinates.push(markerPoint.geometry.coordinates);
-                    const [lng, lat] = markerPoint.geometry.coordinates
+                    const [lng, lat] = markerPoint.geometry.coordinates;
+
+                    const isActiveVertically = line >= (halfTotal - halfRows) && line < (halfTotal + halfRows + (rows % 2));
+                    const isActiveHorizontally = marker >= (halfTotal - halfCols) && marker < (halfTotal + halfCols + (cols % 2));
+
+                    coordinates.push({
+                        coordinates: [lng, lat],
+                        active: isActiveVertically && isActiveHorizontally
+                    });
                 }
             }
 
