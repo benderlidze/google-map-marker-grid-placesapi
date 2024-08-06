@@ -66,6 +66,12 @@
 
     <script>
 
+        let map;
+        let polyline;
+        let distanceOverlay;
+        let path = [];
+
+
         const gridDiv = document.getElementById('grid');
         const googleSearch = document.getElementById('search');
 
@@ -74,7 +80,7 @@
         const appData = new Proxy({
             gridCenter: { lat: 32.0330112964211, lng: 34.82596537402672 },
             gridSize: 5,
-            gridGap: 10,
+            gridGap: 0.1,
             gridUnits: 'km',
             allMarkers: []
         }, {
@@ -99,6 +105,19 @@
                 fullscreenControl: false,
                 styles: mapStyle
             });
+
+            polyline = new google.maps.Polyline({
+                path: path,
+                strokeColor: '#FF0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                map: map,
+            });
+
+            map.addListener('click', (event) => {
+                addLatLng(event.latLng);
+            });
+
 
             //google POI search 
             // Initialize the autocomplete
@@ -207,6 +226,7 @@
         }
 
         function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters, gridUnits }) {
+            console.log('centerCoord, cols, rows, distanceMeters', centerCoord, cols, rows, distanceMeters);
 
             appData.allMarkers = [];
 
@@ -217,18 +237,18 @@
             const halfRows = Math.floor(rows / 2);
 
             const unit = gridUnits === 'km' ? 1 : 1.60934;
-            const markerDistance = (distanceMeters / (cols - 1)) * unit;
-            const lineDistance = (distanceMeters / (rows - 1)) * unit;
+            const markerDistance = ((2 * distanceMeters) / (cols - 1)) * unit;
+            const lineDistance = markerDistance
 
             const centerPoint = turf.point([centerCoord.lng, centerCoord.lat]);
 
             for (let line = 0; line < totalMarkers; line++) {
-                const lineOffset = (line - halfTotal) * (lineDistance / (rows - 1));
+                const lineOffset = (line - halfTotal) * (lineDistance);
                 const lineBearing = lineOffset >= 0 ? 0 : 180;
                 const lineStart = turf.destination(centerPoint, Math.abs(lineOffset), lineBearing);
 
                 for (let marker = 0; marker < totalMarkers; marker++) {
-                    const markerOffset = (marker - halfTotal) * (markerDistance / (cols - 1));
+                    const markerOffset = (marker - halfTotal) * (markerDistance);
                     const markerBearing = markerOffset >= 0 ? 90 : 270;
                     const markerPoint = turf.destination(lineStart, Math.abs(markerOffset), markerBearing);
                     const [lng, lat] = markerPoint.geometry.coordinates;
@@ -246,6 +266,32 @@
             return coordinates;
         }
 
+        // function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters, gridUnits }) {
+        //     // Ensure cols and rows are odd
+        //     cols = cols % 2 === 0 ? cols + 1 : cols;
+        //     rows = rows % 2 === 0 ? rows + 1 : rows;
+
+        //     const markers = [];
+        //     const spacing = (distanceMeters * 2) / cols;
+
+        //     // Calculate the number of markers on each side of the center
+        //     const halfCols = Math.floor(cols / 2);
+        //     const halfRows = Math.floor(rows / 2);
+
+        //     for (let row = -halfRows; row <= halfRows; row++) {
+        //         for (let col = -halfCols; col <= halfCols; col++) {
+        //             const lat = centerCoord[0] + (row * spacing) / gridUnits.lat;
+        //             const lon = centerCoord[1] + (col * spacing) / gridUnits.lon;
+        //             markers.push({
+        //                 coordinates: [lon, lat],
+        //                 active: true
+        //             });
+        //         }
+        //     }
+        //     console.log('marker', marker);
+        //     return markers;
+        // }
+
         function createDropDown({ name, container, values, onChange }) {
             const select = document.createElement('select');
             select.name = name;
@@ -260,6 +306,31 @@
             });
 
             return select;
+        }
+
+
+
+        function addLatLng(latLng) {
+            path.push(latLng);
+            polyline.setPath(path);
+
+            if (path.length > 1) {
+                const distance = google.maps.geometry.spherical.computeLength(polyline.getPath());
+                showDistanceOverlay(latLng, distance);
+            }
+        }
+
+        function showDistanceOverlay(latLng, distance) {
+            if (distanceOverlay) {
+                distanceOverlay.setMap(null);
+            }
+
+            distanceOverlay = new google.maps.InfoWindow({
+                content: `Distance: ${distance.toFixed(2)} meters`,
+                position: latLng,
+            });
+
+            distanceOverlay.open(map);
         }
 
     </script>
