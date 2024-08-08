@@ -223,9 +223,6 @@
                 itemSelectText: '',
                 removeItemButton: true,
                 shouldSort: false,
-                containerOuter: {
-                    minWidth: '300px'
-                }
             });
 
             // Add options to the dropdown
@@ -350,31 +347,7 @@
             return coordinates;
         }
 
-        // function calculateMarkerCoordinates({ centerCoord, cols, rows, distanceMeters, gridUnits }) {
-        //     // Ensure cols and rows are odd
-        //     cols = cols % 2 === 0 ? cols + 1 : cols;
-        //     rows = rows % 2 === 0 ? rows + 1 : rows;
 
-        //     const markers = [];
-        //     const spacing = (distanceMeters * 2) / cols;
-
-        //     // Calculate the number of markers on each side of the center
-        //     const halfCols = Math.floor(cols / 2);
-        //     const halfRows = Math.floor(rows / 2);
-
-        //     for (let row = -halfRows; row <= halfRows; row++) {
-        //         for (let col = -halfCols; col <= halfCols; col++) {
-        //             const lat = centerCoord[0] + (row * spacing) / gridUnits.lat;
-        //             const lon = centerCoord[1] + (col * spacing) / gridUnits.lon;
-        //             markers.push({
-        //                 coordinates: [lon, lat],
-        //                 active: true
-        //             });
-        //         }
-        //     }
-        //     console.log('marker', marker);
-        //     return markers;
-        // }
 
         function createDropDown({ name, container, values, onChange }) {
             const select = document.createElement('select');
