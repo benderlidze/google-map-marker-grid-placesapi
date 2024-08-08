@@ -8,10 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.10/lodash.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7"></script>
 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-
-    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
     <style>
         #map {
@@ -65,14 +65,23 @@
             gap: 4px;
         }
 
-        #google-poi>input {
-            padding: 5px;
-        }
-
         #keywords {
             display: flex;
             flex: 1;
             flex-direction: column;
+            align-items: center;
+        }
+
+        /* Add this rule to ensure consistent padding */
+        input,
+        select {
+            padding: 8px 8px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+
+        .select2-selection {
+            padding: 4px;
         }
     </style>
 </head>
@@ -96,7 +105,12 @@
                     <input type="text" id="search">
                 </div>
                 <div id="keywords">
-                    <select id="my-select" placeholder="KEYWORD" select-multiple>
+                    <select id="multiple-select" style="width: 300px;" multiple>
+                        <option value="option1">Option 1</option>
+                        <option value="option2">Option 2</option>
+                        <option value="option3">Option 3</option>
+                        <option value="option4">Option 4</option>
+                        <option value="option5">Option 5</option>
                     </select>
                 </div>
                 <div id="grid"></div>
@@ -217,21 +231,12 @@
         }
 
         function multipleDropDown() {
-            const choices = new Choices('#my-select', {
-                searchEnabled: true,
-                searchPlaceholderValue: 'KEYWORD',
-                itemSelectText: '',
-                removeItemButton: true,
-                shouldSort: false,
+            $(document).ready(function () {
+                $('#multiple-select').select2({
+                    placeholder: "Keywords",
+                    allowClear: true
+                });
             });
-
-            // Add options to the dropdown
-            choices.setChoices([
-                { value: 'option1', label: 'Option 1' },
-                { value: 'option2', label: 'Option 2' },
-                { value: 'option3', label: 'Option 3' },
-            ], 'value', 'label', false);
-
         }
 
         function drawGrid() {
@@ -346,7 +351,6 @@
 
             return coordinates;
         }
-
 
 
         function createDropDown({ name, container, values, onChange }) {
