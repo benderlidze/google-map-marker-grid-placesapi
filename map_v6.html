@@ -93,6 +93,31 @@
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: unset !important;
         }
+
+        #save-button {
+            position: absolute;
+            z-index: 110;
+            bottom: 30px;
+            /* center page */
+            left: 50%;
+            transform: translateX(-50%);
+
+            padding: 10px;
+            border-radius: 10px;
+            background-color: white;
+            cursor: pointer;
+            border: 1px solid black;
+            font-size: 20px;
+            user-select: none;
+        }
+
+        #save-button:hover {
+            background-color: #f1f1f1;
+        }
+
+        #save-button:active {
+            background-color: #e9e9e9;
+        }
     </style>
 </head>
 
@@ -103,12 +128,25 @@
             <select class="js-example-basic-single" name="state">
                 <option value="">Select language</option>
                 <option value="en" data-image="https://flagcdn.com/w20/us.png">English</option>
-                <option value="es" data-image="https://flagcdn.com/w20/es.png">Español</option>
-                <option value="fr" data-image="https://flagcdn.com/w20/fr.png">Français</option>
-                <option value="de" data-image="https://flagcdn.com/w20/de.png">Deutsch</option>
-                <option value="it" data-image="https://flagcdn.com/w20/it.png">Italiano</option>
-                <option value="he" data-image="https://flagcdn.com/w20/il.png">עברית</option>
-
+                <option value="zh" data-image="https://flagcdn.com/w20/cn.png">中文 (Chinese)</option>
+                <option value="es" data-image="https://flagcdn.com/w20/es.png">Español (Spanish)</option>
+                <option value="hi" data-image="https://flagcdn.com/w20/in.png">हिन्दी (Hindi)</option>
+                <option value="ar" data-image="https://flagcdn.com/w20/sa.png">العربية (Arabic)</option>
+                <option value="fr" data-image="https://flagcdn.com/w20/fr.png">Français (French)</option>
+                <option value="ru" data-image="https://flagcdn.com/w20/ru.png">Русский (Russian)</option>
+                <option value="pt" data-image="https://flagcdn.com/w20/br.png">Português (Portuguese)</option>
+                <option value="bn" data-image="https://flagcdn.com/w20/bd.png">বাংলা (Bengali)</option>
+                <option value="de" data-image="https://flagcdn.com/w20/de.png">Deutsch (German)</option>
+                <option value="ja" data-image="https://flagcdn.com/w20/jp.png">日本語 (Japanese)</option>
+                <option value="pa" data-image="https://flagcdn.com/w20/in.png">ਪੰਜਾਬੀ (Punjabi)</option>
+                <option value="vi" data-image="https://flagcdn.com/w20/vn.png">Tiếng Việt (Vietnamese)</option>
+                <option value="ko" data-image="https://flagcdn.com/w20/kr.png">한국어 (Korean)</option>
+                <option value="mr" data-image="https://flagcdn.com/w20/in.png">मराठी (Marathi)</option>
+                <option value="ta" data-image="https://flagcdn.com/w20/in.png">தமிழ் (Tamil)</option>
+                <option value="ur" data-image="https://flagcdn.com/w20/pk.png">اردو (Urdu)</option>
+                <option value="tr" data-image="https://flagcdn.com/w20/tr.png">Türkçe (Turkish)</option>
+                <option value="fa" data-image="https://flagcdn.com/w20/ir.png">فارسی (Persian)</option>
+                <option value="it" data-image="https://flagcdn.com/w20/it.png">Italiano (Italian)</option>
             </select>
         </div>
         <div id="top-menu">
@@ -133,6 +171,8 @@
             </div>
         </div>
         <div id="map"></div>
+
+        <div id="save-button">Save</div>
     </div>
 
     <script>
@@ -142,7 +182,11 @@
         let distanceOverlay;
         let path = [];
         let autocomplete;
+        let mapInit = false;
 
+        const language = new URLSearchParams(window.location.search).get('language') || 'en';
+
+        const saveButton = document.getElementById('save-button');
         const gridDiv = document.getElementById('grid');
         const googleSearch = document.getElementById('search');
         const gpoi_e = document.getElementById('gpoi_e');
@@ -156,15 +200,43 @@
             gridSize: 5,
             gridGap: 0.1,
             gridUnits: 'km',
-            allMarkers: []
+            allMarkers: [],
+            keywords: [],
         }, {
             set(target, property, value) {
                 target[property] = value;
-                if (property !== 'allMarkers') {
+                if (property !== 'allMarkers' && property !== 'keywords') {
                     drawGrid(target);
                 }
                 return true;
             }
+        });
+
+        saveButton.addEventListener('click', () => {
+            const url = 'https://jsonplaceholder.typicode.com/posts';
+
+            const data = {
+                keywords: appData.keywords,
+                language,
+                markers: appData.allMarkers.filter(m => m.markerType === "active" || m.markerType === "center").map(m => m.getPosition().toJSON()),
+            }
+
+            console.log('data', data);
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
         });
 
         function initMap() {
@@ -179,6 +251,11 @@
                 // styles: mapStyle
             });
 
+            !mapInit && onMapInitOnce()
+            mapInit = true;
+        }
+
+        function onMapInitOnce() {
 
             function initAutocomplete() {
                 autocomplete = new google.maps.places.Autocomplete(googleSearch, {
@@ -186,6 +263,7 @@
                 });
                 autocomplete.addListener('place_changed', onPlaceChanged);
             }
+
             function onPlaceChanged() {
                 var place = autocomplete.getPlace();
                 if (!place.geometry) {
@@ -198,6 +276,7 @@
                     map.setCenter({ lat, lng });
                 }
             }
+
             google.maps.event.addDomListener(window, 'load', initAutocomplete, {
                 types: ['establishment']
             });
@@ -244,31 +323,18 @@
             appData.gridCenter = { lat: 32.0330112964211, lng: 34.82596537402672 };
 
             multipleDropDown()
-
-
-            languageSelector();
+            languageSelector(language);
         }
 
         function multipleDropDown() {
             $(document).ready(function () {
-                // $('#multiple-select').select2({
-                //     placeholder: "Keywords",
-                //     allowClear: true,
-                //     tags: true,
-                //     tokenSeparators: [',', ' '],
-                //     createTag: function (params) {
-                //         return {
-                //             id: params.term,
-                //             text: params.term,
-                //             newTag: true
-                //         }
-                //     }
-                // });
-
                 $('#multiple-select').select2({
                     tags: true,
-                    placeholder: 'Select or add an option',
+                    placeholder: 'Keywords',
                     allowClear: true
+                })
+                $('#multiple-select').on("change", function (e) {
+                    appData.keywords = $(this).val();
                 });
             });
         }
@@ -386,16 +452,26 @@
             return coordinates;
         }
 
-        function languageSelector() {
+        function languageSelector(language) {
             $('.js-example-basic-single').select2({
-                //disable search box
                 minimumResultsForSearch: Infinity, // Disable search
                 templateResult: formatState,
-                templateSelection: formatState
+                templateSelection: formatState,
+            })
+
+            setTimeout(() => {
+                $('.js-example-basic-single').val(language).trigger('change');
+            }, 500);
+
+
+            $('.js-example-basic-single').on('select2:select', function (e) {
+                let selectedValue = $(this).val();
+                console.log('Selected value:', selectedValue);
+                changeLanguage(selectedValue);
             });
 
             // Detect user's language
-            var userLang = navigator.language || navigator.userLanguage;
+            let userLang = navigator.language || navigator.userLanguage;
             userLang = userLang.substring(0, 2).toLowerCase();
 
             console.log('userLang', userLang);
@@ -444,10 +520,42 @@
             return select;
         }
 
+        function changeLanguage(languageCode) {
+
+            // // Remove the old script
+            // const oldScript = document.querySelector('script[src^="https://maps.googleapis.com/maps/api/js"]');
+            // if (oldScript) {
+            //     oldScript.remove();
+            // }
+
+            // const script = document.createElement('script');
+            // script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBeVERtl6-MScPy5xT3ysrJsM4zRkcjGaY&callback=initMap&language=${languageCode}`;
+            // script.defer = true;
+            // script.async = true;
+
+            // // Add the new script
+            // document.head.appendChild(script);
+
+            window.location.href = window.location.pathname + '?language=' + languageCode;
+        }
+
+        function loadGoogleMapsApi(language) {
+            // Construct the URL for the Google Maps API with the specified language
+            var script = document.createElement('script');
+            script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBeVERtl6-MScPy5xT3ysrJsM4zRkcjGaY&libraries=places&callback=initMap&language=" + language;
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        loadGoogleMapsApi(language);
+
+
+
     </script>
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBeVERtl6-MScPy5xT3ysrJsM4zRkcjGaY&libraries=places&callback=initMap"
-        async defer></script>
+    <!-- <script
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBeVERtl6-MScPy5xT3ysrJsM4zRkcjGaY&libraries=places&callback=initMap&language="
+        + language async defer></script> -->
 
 </body>
 
